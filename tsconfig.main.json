@@ -1,0 +1,15 @@
+{
+    "extends": "./tsconfig.base.json",
+    "files": [
+        "./src/index.ts",
+        "./src/run.ts",
+        "./src/ipc.ts",
+        "./src/errors.ts"
+    ],
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "./dist",
+        "module": "nodenext",
+        "moduleResolution": "nodenext"
+    }
+}

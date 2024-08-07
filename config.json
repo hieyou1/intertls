@@ -1,0 +1,24 @@
+{
+    "$schema": "./config.schema.json",
+    "port": 443,
+    "encoding": "utf8",
+    "tcpFallback": true,
+    "tcpPort": 80,
+    "servers": [
+        {
+            "host": "localhost",
+            "tls": {
+                "cert": "./servers/example/cert",
+                "key": "./servers/example/key",
+                "requestCert": false
+            },
+            "process": {
+                "cwd": "./servers/example",
+                "main": "./index.js",
+                "env": {
+                    "HELLO_INTERTLS": "Hi! This InterTLS server has not been configured yet."
+                }
+            }
+        }
+    ]
+}

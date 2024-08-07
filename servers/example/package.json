@@ -1,0 +1,10 @@
+{
+    "name": "sample-intertls-server",
+    "version": "1.0.0",
+    "type": "module",
+    "main": "index.js",
+    "license": "GPL-3.0-only",
+    "dependencies": {
+        "express": "^4.19.2"
+    }
+}

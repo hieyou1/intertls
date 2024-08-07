@@ -1,0 +1,9 @@
+[Unit]
+Description=InterTLS Service
+
+[Service]
+WorkingDirectory=/PATH/TO/intertls
+ExecStart=/PATH/TO/intertls/dist/run.js
+
+[Install]
+WantedBy=multi-user.target

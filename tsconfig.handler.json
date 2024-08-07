@@ -1,0 +1,15 @@
+{
+    "extends": "./tsconfig.base.json",
+    "files": [
+        "./src/handler.ts",
+        "./src/ipc.ts",
+        "./src/errors.ts"
+    ],
+    "compilerOptions": {
+        "composite": true,
+        "outDir": "./handler",
+        "declarationDir": "./handler",
+        "module": "Node16",
+        "moduleResolution": "Node16"
+    }
+}

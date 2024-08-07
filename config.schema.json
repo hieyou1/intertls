@@ -1,0 +1,128 @@
+{
+  "$ref": "#/definitions/InterTLSConfiguration",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "InterTLSConfiguration": {
+      "additionalProperties": false,
+      "properties": {
+        "$schema": {
+          "type": "string"
+        },
+        "encoding": {
+          "$ref": "#/definitions/global.BufferEncoding"
+        },
+        "port": {
+          "type": [
+            "string",
+            "number"
+          ]
+        },
+        "servers": {
+          "items": {
+            "$ref": "#/definitions/ServerConfiguration"
+          },
+          "type": "array"
+        },
+        "tcpFallback": {
+          "type": "boolean"
+        },
+        "tcpPort": {
+          "type": [
+            "string",
+            "number"
+          ]
+        }
+      },
+      "required": [
+        "port",
+        "servers"
+      ],
+      "type": "object"
+    },
+    "ServerConfiguration": {
+      "additionalProperties": false,
+      "properties": {
+        "host": {
+          "type": "string"
+        },
+        "process": {
+          "additionalProperties": false,
+          "properties": {
+            "cwd": {
+              "type": "string"
+            },
+            "env": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "gid": {
+              "type": "number"
+            },
+            "main": {
+              "type": "string"
+            },
+            "uid": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "main",
+            "cwd"
+          ],
+          "type": "object"
+        },
+        "tls": {
+          "additionalProperties": false,
+          "properties": {
+            "ca": {
+              "type": "string"
+            },
+            "cert": {
+              "type": "string"
+            },
+            "key": {
+              "type": "string"
+            },
+            "rejectUnauthorized": {
+              "type": "boolean"
+            },
+            "requestCert": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "cert",
+            "key",
+            "requestCert"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "host",
+        "tls",
+        "process"
+      ],
+      "type": "object"
+    },
+    "global.BufferEncoding": {
+      "enum": [
+        "ascii",
+        "utf8",
+        "utf-8",
+        "utf16le",
+        "utf-16le",
+        "ucs2",
+        "ucs-2",
+        "base64",
+        "base64url",
+        "latin1",
+        "binary",
+        "hex"
+      ],
+      "type": "string"
+    }
+  }
+}

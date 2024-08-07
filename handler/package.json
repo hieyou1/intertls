@@ -1,0 +1,6 @@
+{
+    "name": "intertls-handler",
+    "version": "1.0.0",
+    "main": "handler.js",
+    "type": "module"
+}

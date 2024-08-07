@@ -1,0 +1,20 @@
+{
+    "name": "intertls",
+    "type": "module",
+    "version": "0.0.1",
+    "main": "dist/index.js",
+    "license": "GPL-3.0-only",
+    "scripts": {
+        "build": "npm run build-schema && npm run build-code",
+        "build-schema": "npx ts-json-schema-generator --path 'src/index.ts' --type InterTLSConfiguration > config.schema.json",
+        "build-code": "tsc --build --verbose tsconfig.json && chmod +x ./dist/run.js"
+    },
+    "devDependencies": {
+        "@types/express": "^4.17.21",
+        "@types/node": "^20.14.10",
+        "express": "^4.19.2",
+        "https-localhost": "^4.7.1",
+        "nanoid": "^5.0.7",
+        "typescript": "^5.5.3"
+    }
+}
