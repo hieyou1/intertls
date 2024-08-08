@@ -281,7 +281,7 @@ export class InterTLS {
             pauseOnConnect: true,
             "SNICallback": this.sni.bind(this)
         } as TlsOptions;
-        if (this.config.ipFallback != false) {
+        if (this.config.ipFallback) {
             tlsOpts = {
                 ...tlsOpts,
                 ...this.config.ipFallback

@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.0.6
+
+- Fix bug causing InterTLS to crash when `ipFallback` was not set
+- Fix `run.ts`/`run.js` environment variable name
+
 ## v0.0.5
 
 - Add `ipFallback` to enable a default TLS configuration for those accessing the server that bypass SNI by connecting directly to its IP

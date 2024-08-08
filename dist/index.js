@@ -192,7 +192,7 @@ export class InterTLS {
             pauseOnConnect: true,
             "SNICallback": this.sni.bind(this)
         };
-        if (this.config.ipFallback != false) {
+        if (this.config.ipFallback) {
             tlsOpts = Object.assign(Object.assign({}, tlsOpts), this.config.ipFallback);
             tlsOpts.cert = await readFile(this.config.ipFallback.cert, "utf-8");
             tlsOpts.key = await readFile(this.config.ipFallback.key, "utf-8");
