@@ -67,7 +67,7 @@ class InterTLSServer {
                 case ChildToParentMessageType.READY: {
                     readyResolve();
                     await this.itls.listenPromise;
-                    this.send(ParentToChildMessageType.HELLO, this.itls.encoding, this.itls.localAddress);
+                    this.send(ParentToChildMessageType.HELLO, this.itls.encoding, this.itls.localAddress, this.shouldHandlerLog);
                     break;
                 }
                 case ChildToParentMessageType.DYNAMIC_TLS: {
@@ -82,6 +82,10 @@ class InterTLSServer {
                     this.end(...msg);
                     break;
                 }
+                case ChildToParentMessageType.LOG: {
+                    this.itls.trylog("handler", ...msg);
+                    break;
+                }
                 default: {
                     throw new UnrecognizedMessageError(msg);
                 }
@@ -89,11 +93,12 @@ class InterTLSServer {
         });
         await ready;
     }
-    constructor(itls, proc, shouldIpcLog, dynamic) {
+    constructor(itls, proc, shouldIpcLog, shouldHandlerLog, dynamic) {
         this.itls = itls;
         this.proc = proc;
         this.sockMap = new Map();
         this.shouldIpcLog = shouldIpcLog;
+        this.shouldHandlerLog = shouldHandlerLog;
         this.dynamic = dynamic;
         if (dynamic)
             this.sniMap = new Map();
@@ -152,6 +157,7 @@ export class InterTLS {
         this.trylog("init", "Begin init");
         let ready = [];
         let shouldIpcLog = this.config.log === true || (Array.isArray(this.config.log) && this.config.log.includes("ipc"));
+        let shouldHandlerLog = this.config.log === true || (Array.isArray(this.config.log) && this.config.log.includes("handler"));
         for (let i of this.config.servers) {
             this.configMap.set(i.host, i);
             this.trylog("init", i.host, "config set");
@@ -162,7 +168,7 @@ export class InterTLS {
                 "env": (_a = i.process.env) !== null && _a !== void 0 ? _a : {},
                 "execArgv": [],
                 "silent": this.config.log === true || (Array.isArray(this.config.log) && this.config.log.includes("child_procs"))
-            }), shouldIpcLog, ((_b = i.tls) === null || _b === void 0 ? void 0 : _b.dynamic) === true);
+            }), shouldIpcLog, shouldHandlerLog, ((_b = i.tls) === null || _b === void 0 ? void 0 : _b.dynamic) === true);
             ready.push(server.init());
             this.serverMap.set(i.host, server);
             this.trylog("init", i.host, "forked");

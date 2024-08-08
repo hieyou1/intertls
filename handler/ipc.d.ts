@@ -10,7 +10,8 @@ export type SockId = string;
 export type ParentToChildMessage = [
     ParentToChildMessageType.HELLO,
     BufferEncoding,
-    string
+    string,
+    boolean
 ] | [
     ParentToChildMessageType.DYNAMIC_TLS,
     string,
@@ -34,7 +35,8 @@ export declare enum ChildToParentMessageType {
     READY = 0,
     DYNAMIC_TLS = 1,
     DATA = 2,
-    END = 3
+    END = 3,
+    LOG = 4
 }
 export type ChildToParentMessage = [
     ChildToParentMessageType.READY
@@ -49,5 +51,8 @@ export type ChildToParentMessage = [
 ] | [
     ChildToParentMessageType.END,
     SockId
+] | [
+    ChildToParentMessageType.LOG,
+    ...any
 ];
 //# sourceMappingURL=ipc.d.ts.map

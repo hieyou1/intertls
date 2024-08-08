@@ -58,7 +58,8 @@
         "sni",
         "ipc",
         "child_procs",
-        "init"
+        "init",
+        "handler"
       ],
       "type": "string"
     },

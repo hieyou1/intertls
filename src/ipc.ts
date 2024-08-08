@@ -11,8 +11,8 @@ export enum ParentToChildMessageType {
 export type SockId = string;
 
 export type ParentToChildMessage =
-    // HELLO, encoding, localAddress
-    [ParentToChildMessageType.HELLO, BufferEncoding, string] |
+    // HELLO, encoding, localAddress, shouldHandlerLog
+    [ParentToChildMessageType.HELLO, BufferEncoding, string, boolean] |
     // DYNAMIC_TLS, id, host
     [ParentToChildMessageType.DYNAMIC_TLS, string, string] |
     // OPEN, id, encrypted, localPort, remoteAddress, remotePort
@@ -26,7 +26,8 @@ export enum ChildToParentMessageType {
     READY,
     DYNAMIC_TLS,
     DATA,
-    END
+    END,
+    LOG
 }
 
 export type ChildToParentMessage =
@@ -37,4 +38,6 @@ export type ChildToParentMessage =
     // DATA, id, data (encoded)
     [ChildToParentMessageType.DATA, SockId, string] |
     // END, id
-    [ChildToParentMessageType.END, SockId];
+    [ChildToParentMessageType.END, SockId] |
+    // LOG, args
+    [ChildToParentMessageType.LOG, ...any];

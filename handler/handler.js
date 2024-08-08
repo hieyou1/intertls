@@ -41,8 +41,13 @@ class MockTcp extends Duplex {
     }
 }
 export class InterTLSHandler {
-    hello(encoding, localAddress, localPort) {
+    log(...args) {
+        if (this.shouldHandlerLog)
+            process.send([ChildToParentMessageType.LOG, ...args]);
+    }
+    hello(encoding, localAddress, shouldHandlerLog) {
         this.encoding = encoding;
+        this.shouldHandlerLog = shouldHandlerLog;
         if (!this.opts.override.localAddress)
             this.localAddress = localAddress;
     }
@@ -50,6 +55,7 @@ export class InterTLSHandler {
         process.send([ChildToParentMessageType.DYNAMIC_TLS, id, await this.opts.dynamicTLS(host)]);
     }
     open(id, encrypted, localPort, remoteAddress, remotePort) {
+        this.log(id, "start open");
         let stream = new MockTcp({
             id,
             remoteAddress,
@@ -65,12 +71,15 @@ export class InterTLSHandler {
         stream.on("close", () => this.streamMap.delete(id));
         this.server.emit("connection", stream);
         stream.resume();
+        this.log(id, "opened");
     }
     data(id, data) {
+        this.log(id, "data");
         this.streamMap.get(id).writeAsClient(Buffer.from(data, this.encoding));
     }
     end(id) {
         var _a;
+        this.log(id, "end");
         (_a = this.streamMap.get(id)) === null || _a === void 0 ? void 0 : _a.end();
     }
     listen() {

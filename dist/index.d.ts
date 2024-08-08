@@ -1,6 +1,6 @@
 import { Server as TLSServer } from 'tls';
 import { Server as TCPServer } from 'net';
-export type LogType = "newsock" | "sni" | "ipc" | "child_procs" | "init";
+export type LogType = "newsock" | "sni" | "ipc" | "child_procs" | "init" | "handler";
 export interface ServerConfiguration {
     host: string;
     tls: {

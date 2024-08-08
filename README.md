@@ -63,7 +63,7 @@ npm run build
 ## Configuration
 
 - `$schema`: For a full JSON schema, see [config.schema.json](https://github.com/hieyou1/intertls/blob/main/config.schema.json).
-- `log`: Centralized logging. Either a list of `LogType`s (`newsock` (high-level information about creation [and potential forced destruction] of new sockets), `sni`, `ipc`, `child_procs` (console logs from your servers), `init`) or a `boolean` to enable/disable logging as a whole.
+- `log`: Centralized logging. Either a list of `LogType`s (`newsock` (high-level information about creation [and potential forced destruction] of new sockets), `sni`, `ipc`, `child_procs` (console logs from your servers), `handler` (logs from the InterTLS handler itself), `init`) or a `boolean` to enable/disable logging as a whole.
 - `port`: Main port InterTLS should listen on. Usually 443.
 - `encoding`: `BufferEncoding` InterTLS should use when transferring data in string format to and from its child processes (servers). utf8 is good for logging purposes, otherwise, base64 is probably a good bet.
 - `tcpFallback`: Set to true to enable the plaintext TCP & HTTP fallback; be sure to also set `tcpPort`.

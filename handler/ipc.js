@@ -12,5 +12,6 @@ export var ChildToParentMessageType;
     ChildToParentMessageType[ChildToParentMessageType["DYNAMIC_TLS"] = 1] = "DYNAMIC_TLS";
     ChildToParentMessageType[ChildToParentMessageType["DATA"] = 2] = "DATA";
     ChildToParentMessageType[ChildToParentMessageType["END"] = 3] = "END";
+    ChildToParentMessageType[ChildToParentMessageType["LOG"] = 4] = "LOG";
 })(ChildToParentMessageType || (ChildToParentMessageType = {}));
 //# sourceMappingURL=ipc.js.map

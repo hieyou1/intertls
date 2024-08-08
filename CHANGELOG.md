@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.0.4
+
+- Add `handler` log type
+
 ## v0.0.3
 
 - Add logging configuration (`log`)

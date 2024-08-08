@@ -35,11 +35,13 @@ export interface InterTLSHandlerOptions {
 }
 export declare class InterTLSHandler {
     private opts;
+    private shouldHandlerLog;
     server: Server;
     listening: boolean;
     encoding: BufferEncoding;
     localAddress: string;
     streamMap: Map<string, MockTcp>;
+    log(...args: any): void;
     private hello;
     private dynamicTLS;
     private open;

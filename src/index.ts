@@ -7,7 +7,7 @@ import { AlreadyListeningError, UnrecognizedMessageError } from './errors.js';
 import { AddressInfo } from 'net';
 import { nanoid } from "nanoid";
 
-export type LogType = "newsock" | "sni" | "ipc" | "child_procs" | "init";
+export type LogType = "newsock" | "sni" | "ipc" | "child_procs" | "init" | "handler";
 
 export interface ServerConfiguration {
     host: string;
@@ -46,6 +46,7 @@ class InterTLSServer {
     private sockMap: Map<string, TLSSocket | TCPSocket>;
     private dynamic: boolean;
     private shouldIpcLog: boolean;
+    private shouldHandlerLog: boolean;
 
     proc: ChildProcess;
     tlsOpts: ServerConfiguration["tls"];
@@ -123,7 +124,7 @@ class InterTLSServer {
                 case ChildToParentMessageType.READY: {
                     readyResolve();
                     await this.itls.listenPromise;
-                    this.send(ParentToChildMessageType.HELLO, this.itls.encoding, this.itls.localAddress);
+                    this.send(ParentToChildMessageType.HELLO, this.itls.encoding, this.itls.localAddress, this.shouldHandlerLog);
                     break;
                 }
                 case ChildToParentMessageType.DYNAMIC_TLS: {
@@ -141,6 +142,10 @@ class InterTLSServer {
                     this.end(...msg);
                     break;
                 }
+                case ChildToParentMessageType.LOG: {
+                    this.itls.trylog("handler", ...msg);
+                    break;
+                }
                 default: {
                     throw new UnrecognizedMessageError(msg);
                 }
@@ -149,11 +154,12 @@ class InterTLSServer {
         await ready;
     }
 
-    constructor(itls: InterTLS, proc: ChildProcess, shouldIpcLog: boolean, dynamic: boolean) {
+    constructor(itls: InterTLS, proc: ChildProcess, shouldIpcLog: boolean, shouldHandlerLog: boolean, dynamic: boolean) {
         this.itls = itls;
         this.proc = proc;
         this.sockMap = new Map();
         this.shouldIpcLog = shouldIpcLog;
+        this.shouldHandlerLog = shouldHandlerLog;
         this.dynamic = dynamic;
         if (dynamic) this.sniMap = new Map();
     }
@@ -234,6 +240,7 @@ export class InterTLS {
         this.trylog("init", "Begin init");
         let ready: Promise<void>[] = [];
         let shouldIpcLog = this.config.log === true || (Array.isArray(this.config.log) && (this.config.log as LogType[]).includes("ipc"));
+        let shouldHandlerLog = this.config.log === true || (Array.isArray(this.config.log) && (this.config.log as LogType[]).includes("handler"));
         for (let i of this.config.servers) {
             this.configMap.set(i.host, i);
             this.trylog("init", i.host, "config set");
@@ -245,7 +252,7 @@ export class InterTLS {
                 "env": i.process.env ?? {},
                 "execArgv": [],
                 "silent": this.config.log === true || (Array.isArray(this.config.log) && (this.config.log as LogType[]).includes("child_procs"))
-            }), shouldIpcLog, i.tls?.dynamic === true);
+            }), shouldIpcLog, shouldHandlerLog, i.tls?.dynamic === true);
             ready.push(server.init());
             this.serverMap.set(i.host, server);
             this.trylog("init", i.host, "forked");

@@ -81,6 +81,8 @@ export interface InterTLSHandlerOptions {
 export class InterTLSHandler {
     private opts: InterTLSHandlerOptions;
 
+    private shouldHandlerLog: boolean;
+
     server: Server;
     listening: boolean;
 
@@ -89,9 +91,13 @@ export class InterTLSHandler {
 
     streamMap: Map<string, MockTcp>;
 
+    log(...args: any) {
+        if (this.shouldHandlerLog) process.send([ChildToParentMessageType.LOG, ...args] as ChildToParentMessage);
+    }
 
-    private hello(encoding: BufferEncoding, localAddress: string, localPort: number) {
+    private hello(encoding: BufferEncoding, localAddress: string, shouldHandlerLog: boolean) {
         this.encoding = encoding;
+        this.shouldHandlerLog = shouldHandlerLog;
         if (!this.opts.override.localAddress) this.localAddress = localAddress;
     }
 
@@ -100,6 +106,7 @@ export class InterTLSHandler {
     }
 
     private open(id: string, encrypted: boolean, localPort: number, remoteAddress: string, remotePort: number) {
+        this.log(id, "start open");
         let stream = new MockTcp({
             id,
             remoteAddress,
@@ -115,13 +122,16 @@ export class InterTLSHandler {
         stream.on("close", () => this.streamMap.delete(id));
         this.server.emit("connection", stream);
         stream.resume();
+        this.log(id, "opened");
     }
 
     private data(id: string, data: string) {
+        this.log(id, "data");
         this.streamMap.get(id).writeAsClient(Buffer.from(data, this.encoding));
     }
 
     private end(id: string) {
+        this.log(id, "end");
         this.streamMap.get(id)?.end();
     }
 
