@@ -201,7 +201,13 @@ export class InterTLS {
         }, (sock) => {
             console.log("New TLS socket!");
             // @ts-ignore
-            this.serverMap.get(sock.servername).newSock(sock, true);
+            let host = sock.servername;
+            if (!this.serverMap.has(host)) host = "default";
+            if (!this.serverMap.has(host)) {
+                console.log("Unknown host:", host);
+                sock.destroy();
+            }
+            this.serverMap.get(host).newSock(sock, true);
         });
         console.log("I: TLS Server up");
         if (this.config.tcpFallback) this.tcpServer = tcp({
@@ -218,7 +224,14 @@ export class InterTLS {
                 if (match) {
                     sock.pause();
                     hostDetermined = true;
-                    this.serverMap.get(match[1]).newSock(sock, false, dataEvents);
+
+                    let host = match[1];
+                    if (!this.serverMap.has(host)) host = "default";
+                    if (!this.serverMap.has(host)) {
+                        console.log("Unknown host:", host);
+                        sock.destroy();
+                    }
+                    this.serverMap.get(host).newSock(sock, false, dataEvents);
                 }
             });
             sock.resume();
