@@ -159,7 +159,13 @@ export class InterTLS {
         let shouldIpcLog = this.config.log === true || (Array.isArray(this.config.log) && this.config.log.includes("ipc"));
         let shouldHandlerLog = this.config.log === true || (Array.isArray(this.config.log) && this.config.log.includes("handler"));
         for (let i of this.config.servers) {
-            this.configMap.set(i.host, i);
+            if (Array.isArray(i.host)) {
+                for (let j of i.host)
+                    this.configMap.set(j, i);
+            }
+            else {
+                this.configMap.set(i.host, i);
+            }
             this.trylog("init", i.host, "config set");
             let server = new InterTLSServer(this, fork(i.process.main, {
                 "cwd": i.process.cwd,
@@ -167,19 +173,33 @@ export class InterTLS {
                 "gid": i.process.gid,
                 "env": (_a = i.process.env) !== null && _a !== void 0 ? _a : {},
                 "execArgv": [],
-                "silent": this.config.log === true || (Array.isArray(this.config.log) && this.config.log.includes("child_procs"))
+                "silent": !(this.config.log === true || (Array.isArray(this.config.log) && this.config.log.includes("child_procs")))
             }), shouldIpcLog, shouldHandlerLog, ((_b = i.tls) === null || _b === void 0 ? void 0 : _b.dynamic) === true);
             ready.push(server.init());
-            this.serverMap.set(i.host, server);
+            if (Array.isArray(i.host)) {
+                for (let j of i.host)
+                    this.serverMap.set(j, server);
+            }
+            else {
+                this.serverMap.set(i.host, server);
+            }
             this.trylog("init", i.host, "forked");
         }
         this.trylog("init", "Configmap made:", this.configMap);
         await Promise.all(ready);
         this.trylog("init", "All ready");
-        this.tlsServer = tls({
+        let tlsOpts = {
             pauseOnConnect: true,
             "SNICallback": this.sni.bind(this)
-        }, (sock) => {
+        };
+        if (this.config.ipFallback != false) {
+            tlsOpts = Object.assign(Object.assign({}, tlsOpts), this.config.ipFallback);
+            tlsOpts.cert = await readFile(this.config.ipFallback.cert, "utf-8");
+            tlsOpts.key = await readFile(this.config.ipFallback.key, "utf-8");
+            if (tlsOpts.ca)
+                tlsOpts.ca = await readFile(this.config.ipFallback.ca, "utf-8");
+        }
+        this.tlsServer = tls(tlsOpts, (sock) => {
             this.trylog("newsock", "New TLS socket");
             let host = sock.servername;
             if (!this.serverMap.has(host))

@@ -1,4 +1,4 @@
-import { createSecureContext, SecureContext, SecureContextOptions, TLSSocket, createServer as tls, Server as TLSServer } from 'tls';
+import { createSecureContext, SecureContext, SecureContextOptions, TLSSocket, createServer as tls, Server as TLSServer, TlsOptions } from 'tls';
 import { Socket as TCPSocket, Server as TCPServer, createServer as tcp } from 'net';
 import { ChildProcess, fork } from 'child_process';
 import { readFile } from "fs/promises";
@@ -9,18 +9,24 @@ import { nanoid } from "nanoid";
 
 export type LogType = "newsock" | "sni" | "ipc" | "child_procs" | "init" | "handler";
 
+export interface DynamicServerTLSConfiguration {
+    dynamic: true;
+}
+
+export interface StaticServerTLSConfiguration {
+    dynamic?: false;
+    ca?: string;
+    cert: string;
+    key: string;
+    requestCert: boolean;
+    rejectUnauthorized?: boolean;
+}
+
+export type ServerTLSConfiguration = DynamicServerTLSConfiguration | StaticServerTLSConfiguration;
+
 export interface ServerConfiguration {
-    host: string;
-    tls: {
-        dynamic: true;
-    } | {
-        dynamic?: false;
-        ca?: string;
-        cert: string;
-        key: string;
-        requestCert: boolean;
-        rejectUnauthorized?: boolean;
-    };
+    host: string | string[];
+    tls: ServerTLSConfiguration;
     process: {
         main: string;
         cwd: string;
@@ -38,6 +44,7 @@ export interface InterTLSConfiguration {
     tcpPort?: string | number;
     servers: ServerConfiguration[];
     log?: boolean | LogType[];
+    ipFallback?: false | StaticServerTLSConfiguration;
 }
 
 class InterTLSServer {
@@ -242,7 +249,11 @@ export class InterTLS {
         let shouldIpcLog = this.config.log === true || (Array.isArray(this.config.log) && (this.config.log as LogType[]).includes("ipc"));
         let shouldHandlerLog = this.config.log === true || (Array.isArray(this.config.log) && (this.config.log as LogType[]).includes("handler"));
         for (let i of this.config.servers) {
-            this.configMap.set(i.host, i);
+            if (Array.isArray(i.host)) {
+                for (let j of i.host) this.configMap.set(j, i);
+            } else {
+                this.configMap.set(i.host, i);
+            }
             this.trylog("init", i.host, "config set");
 
             let server = new InterTLSServer(this, fork(i.process.main, {
@@ -251,19 +262,35 @@ export class InterTLS {
                 "gid": i.process.gid,
                 "env": i.process.env ?? {},
                 "execArgv": [],
-                "silent": this.config.log === true || (Array.isArray(this.config.log) && (this.config.log as LogType[]).includes("child_procs"))
+                "silent": !(this.config.log === true || (Array.isArray(this.config.log) && (this.config.log as LogType[]).includes("child_procs")))
             }), shouldIpcLog, shouldHandlerLog, i.tls?.dynamic === true);
             ready.push(server.init());
-            this.serverMap.set(i.host, server);
+
+            if (Array.isArray(i.host)) {
+                for (let j of i.host) this.serverMap.set(j, server);
+            } else {
+                this.serverMap.set(i.host, server);
+            }
+
             this.trylog("init", i.host, "forked");
         }
         this.trylog("init", "Configmap made:", this.configMap);
         await Promise.all(ready);
         this.trylog("init", "All ready");
-        this.tlsServer = tls({
+        let tlsOpts = {
             pauseOnConnect: true,
             "SNICallback": this.sni.bind(this)
-        }, (sock) => {
+        } as TlsOptions;
+        if (this.config.ipFallback != false) {
+            tlsOpts = {
+                ...tlsOpts,
+                ...this.config.ipFallback
+            };
+            tlsOpts.cert = await readFile(this.config.ipFallback.cert, "utf-8");
+            tlsOpts.key = await readFile(this.config.ipFallback.key, "utf-8");
+            if (tlsOpts.ca) tlsOpts.ca = await readFile(this.config.ipFallback.ca, "utf-8");
+        }
+        this.tlsServer = tls(tlsOpts, (sock) => {
             this.trylog("newsock", "New TLS socket");
             // @ts-ignore
             let host = sock.servername;

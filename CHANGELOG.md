@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.0.5
+
+- Add `ipFallback` to enable a default TLS configuration for those accessing the server that bypass SNI by connecting directly to its IP
+- Fix `child_procs` log type
+- Add option to serve more than one `host` per child process using an array
+- README enhancements
+
 ## v0.0.4
 
 - Add `handler` log type

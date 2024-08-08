@@ -2,6 +2,19 @@
   "$ref": "#/definitions/InterTLSConfiguration",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "definitions": {
+    "DynamicServerTLSConfiguration": {
+      "additionalProperties": false,
+      "properties": {
+        "dynamic": {
+          "const": true,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "dynamic"
+      ],
+      "type": "object"
+    },
     "InterTLSConfiguration": {
       "additionalProperties": false,
       "properties": {
@@ -10,6 +23,17 @@
         },
         "encoding": {
           "$ref": "#/definitions/global.BufferEncoding"
+        },
+        "ipFallback": {
+          "anyOf": [
+            {
+              "const": false,
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/StaticServerTLSConfiguration"
+            }
+          ]
         },
         "log": {
           "anyOf": [
@@ -67,7 +91,17 @@
       "additionalProperties": false,
       "properties": {
         "host": {
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ]
         },
         "process": {
           "additionalProperties": false,
@@ -98,57 +132,53 @@
           "type": "object"
         },
         "tls": {
-          "anyOf": [
-            {
-              "additionalProperties": false,
-              "properties": {
-                "dynamic": {
-                  "const": true,
-                  "type": "boolean"
-                }
-              },
-              "required": [
-                "dynamic"
-              ],
-              "type": "object"
-            },
-            {
-              "additionalProperties": false,
-              "properties": {
-                "ca": {
-                  "type": "string"
-                },
-                "cert": {
-                  "type": "string"
-                },
-                "dynamic": {
-                  "const": false,
-                  "type": "boolean"
-                },
-                "key": {
-                  "type": "string"
-                },
-                "rejectUnauthorized": {
-                  "type": "boolean"
-                },
-                "requestCert": {
-                  "type": "boolean"
-                }
-              },
-              "required": [
-                "cert",
-                "key",
-                "requestCert"
-              ],
-              "type": "object"
-            }
-          ]
+          "$ref": "#/definitions/ServerTLSConfiguration"
         }
       },
       "required": [
         "host",
         "tls",
         "process"
+      ],
+      "type": "object"
+    },
+    "ServerTLSConfiguration": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/DynamicServerTLSConfiguration"
+        },
+        {
+          "$ref": "#/definitions/StaticServerTLSConfiguration"
+        }
+      ]
+    },
+    "StaticServerTLSConfiguration": {
+      "additionalProperties": false,
+      "properties": {
+        "ca": {
+          "type": "string"
+        },
+        "cert": {
+          "type": "string"
+        },
+        "dynamic": {
+          "const": false,
+          "type": "boolean"
+        },
+        "key": {
+          "type": "string"
+        },
+        "rejectUnauthorized": {
+          "type": "boolean"
+        },
+        "requestCert": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "cert",
+        "key",
+        "requestCert"
       ],
       "type": "object"
     },

@@ -1,18 +1,21 @@
 import { Server as TLSServer } from 'tls';
 import { Server as TCPServer } from 'net';
 export type LogType = "newsock" | "sni" | "ipc" | "child_procs" | "init" | "handler";
+export interface DynamicServerTLSConfiguration {
+    dynamic: true;
+}
+export interface StaticServerTLSConfiguration {
+    dynamic?: false;
+    ca?: string;
+    cert: string;
+    key: string;
+    requestCert: boolean;
+    rejectUnauthorized?: boolean;
+}
+export type ServerTLSConfiguration = DynamicServerTLSConfiguration | StaticServerTLSConfiguration;
 export interface ServerConfiguration {
-    host: string;
-    tls: {
-        dynamic: true;
-    } | {
-        dynamic?: false;
-        ca?: string;
-        cert: string;
-        key: string;
-        requestCert: boolean;
-        rejectUnauthorized?: boolean;
-    };
+    host: string | string[];
+    tls: ServerTLSConfiguration;
     process: {
         main: string;
         cwd: string;
@@ -31,6 +34,7 @@ export interface InterTLSConfiguration {
     tcpPort?: string | number;
     servers: ServerConfiguration[];
     log?: boolean | LogType[];
+    ipFallback?: false | StaticServerTLSConfiguration;
 }
 export declare class InterTLS {
     private config;

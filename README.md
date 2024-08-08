@@ -69,7 +69,7 @@ npm run build
 - `tcpFallback`: Set to true to enable the plaintext TCP & HTTP fallback; be sure to also set `tcpPort`.
 - `tcpPort`: Port InterTLS should listen on for `tcpFallback`. InterTLS expects plaintext HTTP traffic on this port. Usually 80. Ignored when `tcpFallback` is set to false.
 - `servers`: Array of servers for InterTLS to run, manage, and forward traffic to.
-  - `host`: Hostname of this server. Should match the server name that clients pass in for SNI, and (if using TCP fallback) the HTTP `Host` header.
+  - `host`: String or string array specifying hostname(s) of this server. Should match the server name that clients pass in for SNI and the HTTP `Host` header if using TCP fallback.
   - `tls`: TLS options for this server. Set to `{"dynamic": true}` to dynamically handle TLS, otherwise `cert`, `key`, and `requestCert` are required. `ca` and `rejectUnauthorized` are the two other options that have been tested and are explicitly defined in the schema, and YMMV with other [SecureContextOptions](https://nodejs.org/api/tls.html#tlscreatesecurecontextoptions), but feel free to try them and PR!
   - `process`: Node options for this server.
     - `main`: Node entrypoint of the server.
@@ -77,6 +77,7 @@ npm run build
     - `env` (optional): Object with environment variables to pass to the server. Defaults to {}.
     - `uid` (optional): User ID for the process. Defaults to the user of the process running InterTLS (which is probably not what you want!)
     - `gid` (optional): Group ID for the process. Defaults to the group of the process running InterTLS (which is probably not what you want!)
+- `ipFallback`: TLS configuration (see `servers.tls` above) for those accessing the server that bypass SNI by connecting directly to its IP.
 
 ## Handler options
 
