@@ -6,31 +6,54 @@ import { ChildToParentMessageType, ParentToChildMessageType } from "./ipc.js";
 import { AlreadyListeningError, UnrecognizedMessageError } from './errors.js';
 import { nanoid } from "nanoid";
 class InterTLSServer {
+    send(...msg) {
+        if (this.shouldIpcLog)
+            this.itls.trylog("ipc", "->", msg);
+        return this.proc.send(msg);
+    }
+    dynamicTLS(id, opts) {
+        this.sniMap.get(id)(opts);
+        this.sniMap.delete(id);
+    }
     data(id, data) {
         this.sockMap.get(id).write(Buffer.from(data, this.itls.encoding));
     }
     end(id) {
         var _a;
         (_a = this.sockMap.get(id)) === null || _a === void 0 ? void 0 : _a.end();
+        this.sockMap.delete(id);
+    }
+    genId(sock) {
+        let id;
+        while (true) {
+            id = nanoid();
+            if (!(sock ? this.sockMap : this.sniMap).has(id))
+                return id;
+        }
+    }
+    sni(host) {
+        if (!this.dynamic)
+            return;
+        let sniId = this.genId(false);
+        let retSni;
+        let prom = new Promise((resolve) => retSni = resolve);
+        this.sniMap.set(sniId, retSni);
+        this.send(ParentToChildMessageType.DYNAMIC_TLS, sniId, host);
+        return prom;
     }
     async newSock(sock, encrypted, dataEvents = []) {
-        let sockId;
-        while (true) {
-            sockId = nanoid();
-            if (!this.sockMap.has(sockId)) {
-                this.sockMap.set(sockId, sock);
-                break;
-            }
-        }
-        this.proc.send([ParentToChildMessageType.OPEN, sockId, encrypted, ((encrypted) ? this.itls.tlsPort : this.itls.tcpPort), sock.remoteAddress, sock.remotePort]);
+        let sockId = this.genId(true);
+        this.sockMap.set(sockId, sock);
+        this.send(ParentToChildMessageType.OPEN, sockId, encrypted, ((encrypted) ? this.itls.tlsPort : this.itls.tcpPort), sock.remoteAddress, sock.remotePort);
         sock.on("data", (chunk) => {
-            this.proc.send([ParentToChildMessageType.DATA, sockId, chunk.toString(this.itls.encoding)]);
+            this.send(ParentToChildMessageType.DATA, sockId, chunk.toString(this.itls.encoding));
         });
         sock.on("end", () => {
-            this.proc.send([ParentToChildMessageType.END, sockId]);
+            this.send(ParentToChildMessageType.END, sockId);
+            this.sockMap.delete(sockId);
         });
         while (dataEvents.length > 0) {
-            this.proc.send([ParentToChildMessageType.DATA, sockId, dataEvents.shift().toString(this.itls.encoding)]);
+            this.send(ParentToChildMessageType.DATA, sockId, dataEvents.shift().toString(this.itls.encoding));
         }
         sock.resume();
     }
@@ -38,12 +61,17 @@ class InterTLSServer {
         let readyResolve;
         let ready = new Promise((resolve) => readyResolve = resolve);
         this.proc.on("message", async (msg) => {
-            console.log("<-", msg);
+            if (this.shouldIpcLog)
+                this.itls.trylog("ipc", "<-", msg);
             switch (msg.shift()) {
                 case ChildToParentMessageType.READY: {
                     readyResolve();
                     await this.itls.listenPromise;
-                    this.proc.send([ParentToChildMessageType.HELLO, this.itls.encoding, this.itls.localAddress]);
+                    this.send(ParentToChildMessageType.HELLO, this.itls.encoding, this.itls.localAddress);
+                    break;
+                }
+                case ChildToParentMessageType.DYNAMIC_TLS: {
+                    this.dynamicTLS(...msg);
                     break;
                 }
                 case ChildToParentMessageType.DATA: {
@@ -61,10 +89,14 @@ class InterTLSServer {
         });
         await ready;
     }
-    constructor(itls, proc) {
+    constructor(itls, proc, shouldIpcLog, dynamic) {
         this.itls = itls;
         this.proc = proc;
         this.sockMap = new Map();
+        this.shouldIpcLog = shouldIpcLog;
+        this.dynamic = dynamic;
+        if (dynamic)
+            this.sniMap = new Map();
     }
 }
 export class InterTLS {
@@ -78,73 +110,87 @@ export class InterTLS {
         this.listening = false;
         this.inited = false;
     }
+    async trylog(type, ...args) {
+        if (!this.config.log)
+            return;
+        if (this.config.log === true || this.config.log.includes(type))
+            console.log(`${type} at ${new Date().toISOString()}:`, ...args);
+    }
     sni(serverName, cb) {
         (new Promise(async (resolve, reject) => {
-            console.log("SNI for", serverName);
-            console.log("S: configMap:", this.configMap);
-            let server = this.configMap.get(serverName);
-            if (!server)
-                reject("Invalid serverName");
-            console.log("S:", serverName, "found");
-            let opts = Object.assign(Object.assign({}, server.tls), { cert: await readFile(server.tls.cert, "utf8"), key: await readFile(server.tls.key, "utf8") });
-            if (server.tls.ca)
-                opts.ca = await readFile(server.tls.ca);
-            console.log("S: Sending back (cert only)", opts.cert);
-            console.log("S: Key exists?:", opts.key != "");
-            console.log("S: CA exists?: ", opts.ca != "");
+            this.trylog("sni", "SNI for", serverName);
+            let host = serverName;
+            if (!this.serverMap.has(host))
+                host = "default";
+            if (!this.serverMap.has(host)) {
+                this.trylog("sni", "Unknown host:", serverName);
+                return reject("Invalid serverName");
+            }
+            let config = this.configMap.get(host);
+            this.trylog("sni", host, "found");
+            let opts;
+            if (config.tls.dynamic == true) {
+                this.trylog("sni", host, "is dynamic");
+                opts = await this.serverMap.get(host).sni(host);
+            }
+            else {
+                opts = Object.assign(Object.assign({}, config.tls), { cert: await readFile(config.tls.cert, "utf8"), key: await readFile(config.tls.key, "utf8") });
+                if (config.tls.ca)
+                    opts.ca = await readFile(config.tls.ca);
+                this.trylog("sni", "Sending cert", opts.cert);
+                this.trylog("sni", "Key exists?:", opts.key != "");
+                this.trylog("sni", "CA exists?:", opts.ca != "");
+            }
             resolve(createSecureContext(opts));
         })).then((ctx) => cb(null, ctx), (err) => cb(err));
     }
     async init() {
-        var _a;
+        var _a, _b;
         if (this.inited)
             return;
         this.inited = true;
-        console.log("I: Begin init()");
+        this.trylog("init", "Begin init");
         let ready = [];
+        let shouldIpcLog = this.config.log === true || (Array.isArray(this.config.log) && this.config.log.includes("ipc"));
         for (let i of this.config.servers) {
             this.configMap.set(i.host, i);
-            console.log("I:", i.host, "config set");
-            let tlsOpts = Object.assign({}, i.tls);
-            if (tlsOpts.ca)
-                tlsOpts.ca = await readFile(tlsOpts.ca, "utf-8");
-            tlsOpts.cert = await readFile(tlsOpts.cert, "utf-8");
-            tlsOpts.key = await readFile(tlsOpts.key, "utf-8");
+            this.trylog("init", i.host, "config set");
             let server = new InterTLSServer(this, fork(i.process.main, {
                 "cwd": i.process.cwd,
                 "uid": i.process.uid,
                 "gid": i.process.gid,
                 "env": (_a = i.process.env) !== null && _a !== void 0 ? _a : {},
                 "execArgv": [],
-                "silent": false
-            }));
+                "silent": this.config.log === true || (Array.isArray(this.config.log) && this.config.log.includes("child_procs"))
+            }), shouldIpcLog, ((_b = i.tls) === null || _b === void 0 ? void 0 : _b.dynamic) === true);
             ready.push(server.init());
             this.serverMap.set(i.host, server);
-            console.log("I:", i.host, "forked");
+            this.trylog("init", i.host, "forked");
         }
-        console.log("I: Configmap made:", this.configMap);
+        this.trylog("init", "Configmap made:", this.configMap);
         await Promise.all(ready);
-        console.log("I: All ready");
+        this.trylog("init", "All ready");
         this.tlsServer = tls({
             pauseOnConnect: true,
             "SNICallback": this.sni.bind(this)
         }, (sock) => {
-            console.log("New TLS socket!");
+            this.trylog("newsock", "New TLS socket");
             let host = sock.servername;
             if (!this.serverMap.has(host))
                 host = "default";
             if (!this.serverMap.has(host)) {
-                console.log("Unknown host:", host);
+                this.trylog("newsock", "Unknown host:", sock.servername);
                 sock.destroy();
+                return;
             }
             this.serverMap.get(host).newSock(sock, true);
         });
-        console.log("I: TLS Server up");
-        if (this.config.tcpFallback)
+        this.trylog("init", "TLS server up");
+        if (this.config.tcpFallback) {
             this.tcpServer = tcp({
                 pauseOnConnect: true
             }, (sock) => {
-                console.log("New TCP socket!");
+                this.trylog("newsock", "New TCP socket");
                 let dataEvents = [];
                 let hostDetermined = false;
                 sock.on('data', (chunk) => {
@@ -159,16 +205,18 @@ export class InterTLS {
                         if (!this.serverMap.has(host))
                             host = "default";
                         if (!this.serverMap.has(host)) {
-                            console.log("Unknown host:", host);
+                            this.trylog("newsock", "Unknown host:", match[1]);
                             sock.destroy();
+                            return;
                         }
                         this.serverMap.get(host).newSock(sock, false, dataEvents);
                     }
                 });
                 sock.resume();
             });
-        console.log("I: TCP Server up");
-        console.log("init() complete");
+            this.trylog("init", "TCP server up");
+        }
+        this.trylog("init", "init complete");
     }
     async listen() {
         if (this.listening)

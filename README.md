@@ -25,6 +25,13 @@ This project started out of a need to host multiple Node HTTPS servers on the sa
 - Recent version of Node
 - Recent version of TypeScript (one that supports project references)
 
+## Usage
+
+1. Install and configure the server.
+2. Create a server using Node.
+3. Pass the server (with options, if necessary) to the handler.
+4. Run InterTLS!
+
 ## Installation
 
 Tested on Ubuntu Server:
@@ -56,19 +63,26 @@ npm run build
 ## Configuration
 
 - `$schema`: For a full JSON schema, see [config.schema.json](https://github.com/hieyou1/intertls/blob/main/config.schema.json).
+- `log`: Centralized logging. Either a list of `LogType`s (`newsock` (high-level information about creation [and potential forced destruction] of new sockets), `sni`, `ipc`, `child_procs` (console logs from your servers), `init`) or a `boolean` to enable/disable logging as a whole.
 - `port`: Main port InterTLS should listen on. Usually 443.
 - `encoding`: `BufferEncoding` InterTLS should use when transferring data in string format to and from its child processes (servers). utf8 is good for logging purposes, otherwise, base64 is probably a good bet.
 - `tcpFallback`: Set to true to enable the plaintext TCP & HTTP fallback; be sure to also set `tcpPort`.
 - `tcpPort`: Port InterTLS should listen on for `tcpFallback`. InterTLS expects plaintext HTTP traffic on this port. Usually 80. Ignored when `tcpFallback` is set to false.
 - `servers`: Array of servers for InterTLS to run, manage, and forward traffic to.
   - `host`: Hostname of this server. Should match the server name that clients pass in for SNI, and (if using TCP fallback) the HTTP `Host` header.
-  - `tls`: TLS options for this server. `cert`, `key`, and `requestCert` are required. `ca` and `rejectUnauthorized` are the two other options that have been tested and are explicitly defined in the schema, and YMMV with other [SecureContextOptions](https://nodejs.org/api/tls.html#tlscreatesecurecontextoptions), but feel free to try them and PR!
+  - `tls`: TLS options for this server. Set to `{"dynamic": true}` to dynamically handle TLS, otherwise `cert`, `key`, and `requestCert` are required. `ca` and `rejectUnauthorized` are the two other options that have been tested and are explicitly defined in the schema, and YMMV with other [SecureContextOptions](https://nodejs.org/api/tls.html#tlscreatesecurecontextoptions), but feel free to try them and PR!
   - `process`: Node options for this server.
     - `main`: Node entrypoint of the server.
     - `cwd`: Working directory of the server.
     - `env` (optional): Object with environment variables to pass to the server. Defaults to {}.
     - `uid` (optional): User ID for the process. Defaults to the user of the process running InterTLS (which is probably not what you want!)
     - `gid` (optional): Group ID for the process. Defaults to the group of the process running InterTLS (which is probably not what you want!)
+
+## Handler options
+
+- `dynamicTLS`: If using Dynamic TLS, this should be a function that takes in a `host` as a string and returns a `Promise` with the [SecureContextOptions](https://nodejs.org/api/tls.html#tlscreatesecurecontextoptions) to use for it.
+- `autoListen`: Set to `false` to prevent the InterTLS handler from automatically listening for IPC messages from the parent. Useful if there is additional logic to be done after invoking the handler.
+- `override`: If needed, declaratively override the `localAddress` and `localPort` attributes of the `MockTcp` streams that are emitted to the server.
 
 ## License
 

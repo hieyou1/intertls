@@ -11,6 +11,19 @@
         "encoding": {
           "$ref": "#/definitions/global.BufferEncoding"
         },
+        "log": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "items": {
+                "$ref": "#/definitions/LogType"
+              },
+              "type": "array"
+            }
+          ]
+        },
         "port": {
           "type": [
             "string",
@@ -38,6 +51,16 @@
         "servers"
       ],
       "type": "object"
+    },
+    "LogType": {
+      "enum": [
+        "newsock",
+        "sni",
+        "ipc",
+        "child_procs",
+        "init"
+      ],
+      "type": "string"
     },
     "ServerConfiguration": {
       "additionalProperties": false,
@@ -74,30 +97,51 @@
           "type": "object"
         },
         "tls": {
-          "additionalProperties": false,
-          "properties": {
-            "ca": {
-              "type": "string"
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "dynamic": {
+                  "const": true,
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "dynamic"
+              ],
+              "type": "object"
             },
-            "cert": {
-              "type": "string"
-            },
-            "key": {
-              "type": "string"
-            },
-            "rejectUnauthorized": {
-              "type": "boolean"
-            },
-            "requestCert": {
-              "type": "boolean"
+            {
+              "additionalProperties": false,
+              "properties": {
+                "ca": {
+                  "type": "string"
+                },
+                "cert": {
+                  "type": "string"
+                },
+                "dynamic": {
+                  "const": false,
+                  "type": "boolean"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "rejectUnauthorized": {
+                  "type": "boolean"
+                },
+                "requestCert": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "cert",
+                "key",
+                "requestCert"
+              ],
+              "type": "object"
             }
-          },
-          "required": [
-            "cert",
-            "key",
-            "requestCert"
-          ],
-          "type": "object"
+          ]
         }
       },
       "required": [

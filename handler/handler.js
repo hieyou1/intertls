@@ -46,6 +46,9 @@ export class InterTLSHandler {
         if (!this.opts.override.localAddress)
             this.localAddress = localAddress;
     }
+    async dynamicTLS(id, host) {
+        process.send([ChildToParentMessageType.DYNAMIC_TLS, id, await this.opts.dynamicTLS(host)]);
+    }
     open(id, encrypted, localPort, remoteAddress, remotePort) {
         let stream = new MockTcp({
             id,
@@ -75,10 +78,13 @@ export class InterTLSHandler {
             throw new AlreadyListeningError();
         this.listening = true;
         process.on("message", async (msg) => {
-            console.log("->", msg);
             switch (msg.shift()) {
                 case ParentToChildMessageType.HELLO: {
                     this.hello(...msg);
+                    break;
+                }
+                case ParentToChildMessageType.DYNAMIC_TLS: {
+                    this.dynamicTLS(...msg);
                     break;
                 }
                 case ParentToChildMessageType.OPEN: {

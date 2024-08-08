@@ -2,6 +2,7 @@ import { Duplex, DuplexOptions } from "stream";
 import { ParentToChildMessage, ChildToParentMessage, ParentToChildMessageType, ChildToParentMessageType } from "./ipc.js";
 import { UnrecognizedMessageError, AlreadyListeningError } from "./errors.js";
 import { Server } from "http";
+import { SecureContextOptions } from "tls";
 
 class MockTcp extends Duplex {
     id: string;
@@ -69,6 +70,7 @@ class MockTcp extends Duplex {
 }
 
 export interface InterTLSHandlerOptions {
+    dynamicTLS?: (host: string) => Promise<SecureContextOptions>;
     autoListen?: boolean;
     override?: {
         localAddress?: string;
@@ -91,6 +93,10 @@ export class InterTLSHandler {
     private hello(encoding: BufferEncoding, localAddress: string, localPort: number) {
         this.encoding = encoding;
         if (!this.opts.override.localAddress) this.localAddress = localAddress;
+    }
+
+    private async dynamicTLS(id: string, host: string) {
+        process.send([ChildToParentMessageType.DYNAMIC_TLS, id, await this.opts.dynamicTLS(host)] as ChildToParentMessage);
     }
 
     private open(id: string, encrypted: boolean, localPort: number, remoteAddress: string, remotePort: number) {
@@ -124,11 +130,15 @@ export class InterTLSHandler {
         if (this.listening) throw new AlreadyListeningError();
         this.listening = true;
         process.on("message", async (msg: ParentToChildMessage) => {
-            console.log("->", msg);
             switch (msg.shift()) {
                 case ParentToChildMessageType.HELLO: {
                     // @ts-ignore
                     this.hello(...msg);
+                    break;
+                }
+                case ParentToChildMessageType.DYNAMIC_TLS: {
+                    // @ts-ignore
+                    this.dynamicTLS(...msg);
                     break;
                 }
                 case ParentToChildMessageType.OPEN: {

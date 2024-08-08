@@ -1,5 +1,6 @@
 import { Duplex, DuplexOptions } from "stream";
 import { Server } from "http";
+import { SecureContextOptions } from "tls";
 declare class MockTcp extends Duplex {
     id: string;
     encrypted: boolean;
@@ -25,6 +26,7 @@ declare class MockTcp extends Duplex {
     _write(chunk: any, encoding: BufferEncoding, callback: (err: Error | null) => void): void;
 }
 export interface InterTLSHandlerOptions {
+    dynamicTLS?: (host: string) => Promise<SecureContextOptions>;
     autoListen?: boolean;
     override?: {
         localAddress?: string;
@@ -39,6 +41,7 @@ export declare class InterTLSHandler {
     localAddress: string;
     streamMap: Map<string, MockTcp>;
     private hello;
+    private dynamicTLS;
     private open;
     private data;
     private end;

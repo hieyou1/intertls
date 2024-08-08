@@ -1,5 +1,6 @@
 {
     "$schema": "./config.schema.json",
+    "log": true,
     "port": 443,
     "encoding": "utf8",
     "tcpFallback": true,

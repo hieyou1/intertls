@@ -1,13 +1,19 @@
+import { SecureContextOptions } from "tls";
 export declare enum ParentToChildMessageType {
     HELLO = 0,
-    OPEN = 1,
-    DATA = 2,
-    END = 3
+    DYNAMIC_TLS = 1,
+    OPEN = 2,
+    DATA = 3,
+    END = 4
 }
 export type SockId = string;
 export type ParentToChildMessage = [
     ParentToChildMessageType.HELLO,
     BufferEncoding,
+    string
+] | [
+    ParentToChildMessageType.DYNAMIC_TLS,
+    string,
     string
 ] | [
     ParentToChildMessageType.OPEN,
@@ -26,11 +32,16 @@ export type ParentToChildMessage = [
 ];
 export declare enum ChildToParentMessageType {
     READY = 0,
-    DATA = 1,
-    END = 2
+    DYNAMIC_TLS = 1,
+    DATA = 2,
+    END = 3
 }
 export type ChildToParentMessage = [
     ChildToParentMessageType.READY
+] | [
+    ChildToParentMessageType.DYNAMIC_TLS,
+    string,
+    SecureContextOptions
 ] | [
     ChildToParentMessageType.DATA,
     SockId,

@@ -1,8 +1,12 @@
 import { Server as TLSServer } from 'tls';
 import { Server as TCPServer } from 'net';
+export type LogType = "newsock" | "sni" | "ipc" | "child_procs" | "init";
 export interface ServerConfiguration {
     host: string;
     tls: {
+        dynamic: true;
+    } | {
+        dynamic?: false;
         ca?: string;
         cert: string;
         key: string;
@@ -26,6 +30,7 @@ export interface InterTLSConfiguration {
     tcpFallback?: boolean;
     tcpPort?: string | number;
     servers: ServerConfiguration[];
+    log?: boolean | LogType[];
 }
 export declare class InterTLS {
     private config;
@@ -42,6 +47,7 @@ export declare class InterTLS {
     tlsPort?: number;
     tcpPort?: number;
     constructor(config: InterTLSConfiguration);
+    trylog(type: LogType, ...args: any): Promise<void>;
     private sni;
     init(): Promise<void>;
     listen(): Promise<void>;
